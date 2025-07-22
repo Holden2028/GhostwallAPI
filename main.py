@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from detection import detect_bot
 import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
     with open("log.txt", "a") as f:
@@ -18,6 +19,13 @@ def log_request(ip, user_agent, api_key, visitor_type, details):
 VALID_API_KEYS = {"test123", "ghostwall2024", "anotherkey"}
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify ["http://127.0.0.1:5050"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class CheckRequest(BaseModel):
     api_key: str
