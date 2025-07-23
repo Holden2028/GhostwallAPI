@@ -63,14 +63,14 @@ def get_logs():
         with open(LOG_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split('\t')
-                if len(parts) >= 6:
+                if len(parts) >= 5:  # minimum fields without details
                     logs.append({
                         "timestamp": parts[0],
                         "ip": parts[1],
                         "api_key": parts[2],
                         "user_agent": parts[3],
                         "visitor_type": parts[4],
-                        "details": parts[5]
+                        "details": parts[5] if len(parts) > 5 else ""  # empty if missing
                     })
     except FileNotFoundError:
         logs = []
