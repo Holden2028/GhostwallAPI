@@ -4,24 +4,12 @@ from detection import detect_bot
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-import os
 
 LOG_FILE = "/opt/render/project/src/log.txt"
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
-    with open(LOG_FILE, "a") as f:
-        f.write(
-            f"{datetime.datetime.utcnow().isoformat()}\t"
-            f"{ip}\t"
-            f"{api_key}\t"
-            f"{user_agent}\t"
-            f"{visitor_type}\t"
-            f"{details}\n"
-        )
-
-def log_request(ip, user_agent, api_key, visitor_type, details):
     print(f"LOGGING: ip={ip}, api_key={api_key}, visitor_type={visitor_type}, details={details}")  # Debug line
-    with open("log.txt", "a") as f:
+    with open(LOG_FILE, "a") as f:
         f.write(
             f"{datetime.datetime.utcnow().isoformat()}\t"
             f"{ip}\t"
@@ -95,7 +83,7 @@ def root():
 @app.delete("/logs")
 def clear_logs():
     try:
-        open("log.txt", "w").close()
+        open(LOG_FILE, "w").close()
         return {"status": "ok", "message": "Logs cleared."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
