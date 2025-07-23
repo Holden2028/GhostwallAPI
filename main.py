@@ -72,7 +72,7 @@ async def check(req: CheckRequest, request: Request):
 def get_logs():
     logs = []
     try:
-        with open("log.txt") as f:
+        with open(LOG_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split('\t')
                 if len(parts) >= 6:
