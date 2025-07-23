@@ -8,22 +8,21 @@ import os
 def log_request(ip, user_agent, api_key, visitor_type, details):
     with open("log.txt", "a") as f:
         f.write(
-            f"{datetime.datetime.utcnow().isoformat()} "
-            f"IP:{ip} "
-            f"KEY:{api_key} "
-            f"UA:'{user_agent}' "
-            f"TYPE:{visitor_type} "
-            f"DETAILS:{details}\n"
+            f"{datetime.datetime.utcnow().isoformat()}\t"
+            f"{ip}\t"
+            f"{api_key}\t"
+            f"{user_agent}\t"
+            f"{visitor_type}\t"
+            f"{details}\n"
         )
 
-# List or set of valid API keys (replace with your real keys!)
 VALID_API_KEYS = {"test123", "ghostwall2024", "anotherkey"}
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or specify ["http://127.0.0.1:5050"]
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -48,9 +47,19 @@ def get_logs():
     logs = []
     try:
         with open("log.txt") as f:
-            logs = [line.strip() for line in f.readlines()]
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) >= 6:
+                    logs.append({
+                        "timestamp": parts[0],
+                        "ip": parts[1],
+                        "api_key": parts[2],
+                        "user_agent": parts[3],
+                        "visitor_type": parts[4],
+                        "details": parts[5]
+                    })
     except FileNotFoundError:
-        logs = ["No logs found."]
+        logs = []
     return {"logs": logs}
 
 @app.get("/")
