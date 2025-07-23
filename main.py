@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
+    print(f"LOGGING: ip={ip}, api_key={api_key}, visitor_type={visitor_type}, details={details}")  # Debug line
     with open("log.txt", "a") as f:
         f.write(
             f"{datetime.datetime.utcnow().isoformat()}\t"
