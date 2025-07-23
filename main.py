@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from detection import detect_bot
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
     with open("log.txt", "a") as f:
@@ -55,3 +56,11 @@ def get_logs():
 @app.get("/")
 def root():
     return {"status": "ok"}
+
+@app.delete("/logs")
+def clear_logs():
+    try:
+        open("log.txt", "w").close()
+        return {"status": "ok", "message": "Logs cleared."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
