@@ -3,9 +3,21 @@ from pydantic import BaseModel
 from detection import detect_bot
 import datetime
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 import os
 
-print("Current working directory:", os.getcwd())
+LOG_FILE = "/opt/render/project/src/log.txt"
+
+def log_request(ip, user_agent, api_key, visitor_type, details):
+    with open(LOG_FILE, "a") as f:
+        f.write(
+            f"{datetime.datetime.utcnow().isoformat()}\t"
+            f"{ip}\t"
+            f"{api_key}\t"
+            f"{user_agent}\t"
+            f"{visitor_type}\t"
+            f"{details}\n"
+        )
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
     print(f"LOGGING: ip={ip}, api_key={api_key}, visitor_type={visitor_type}, details={details}")  # Debug line
@@ -33,6 +45,17 @@ app.add_middleware(
 class CheckRequest(BaseModel):
     api_key: str
     user_agent: str
+
+@app.get("/logfile")
+def read_log_file():
+    try:
+        with open(LOG_FILE, "r") as f:
+            content = f.read()
+        return PlainTextResponse(content)
+    except FileNotFoundError:
+        return PlainTextResponse("Log file not found.", status_code=404)
+    except Exception as e:
+        return PlainTextResponse(f"Error reading log file: {e}", status_code=500)
 
 @app.post("/check")
 async def check(req: CheckRequest, request: Request):
