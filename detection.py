@@ -80,7 +80,7 @@ def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
         return 'bot', header_reason
 
     score = fingerprint_score(fingerprint)
-    if score < 5:
+    if score < 11:
         return 'bot', f"Low fingerprint score: {score}"
 
     return 'human', f"Fingerprint score OK: {score}"
