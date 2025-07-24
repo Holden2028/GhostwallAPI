@@ -17,10 +17,12 @@ COMMON_BROWSER_HEADERS = [
 
 IMPORTANT_HEADERS = {'user-agent', 'accept', 'accept-language'}
 
-# --- Rate limiting state (in-memory) ---
+# --- State (in-memory, per-process) ---
 RATE_LIMIT = 20
 RATE_WINDOW = 60
+SUPPRESS_WINDOW = 1
 ip_activity = {}
+recent_human_logs = {}
 
 def _rate_limit(ip: str) -> bool:
     now = time.time()
@@ -37,25 +39,20 @@ def suspicious_headers(headers: dict) -> (bool, str):
 
 def fingerprint_score(fingerprint: dict) -> int:
     score = 0
-
-    # Header quality
     headers = fingerprint.get("headers", {})
     header_keys = [k.lower() for k in headers.keys()]
     score += sum(1 for h in COMMON_BROWSER_HEADERS if h in header_keys)
 
-    # Penalize missing important headers
     for h in IMPORTANT_HEADERS:
         if h not in header_keys:
             score -= 5
 
-    # Cookie presence
     cookies = fingerprint.get("cookies", {})
     if cookies:
         score += 3
     else:
         score -= 3
 
-    # Presence of known fields
     if fingerprint.get("referer"):
         score += 2
     if fingerprint.get("accept_language"):
@@ -66,6 +63,12 @@ def fingerprint_score(fingerprint: dict) -> int:
     return score
 
 def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
+    now = time.time()
+
+    # Suppress log if same IP was recently marked human
+    if ip in recent_human_logs and now - recent_human_logs[ip] < SUPPRESS_WINDOW:
+        return 'suppress', 'Duplicate recent human log'
+
     if _rate_limit(ip):
         return 'bot', 'Rate limit exceeded'
 
@@ -77,8 +80,8 @@ def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
     headers = fingerprint.get("headers", {})
     score = fingerprint_score(fingerprint)
 
-    # Accept good fingerprints even with minor header issues
     if score >= 12:
+        recent_human_logs[ip] = now
         return 'human', f"Fingerprint score override: {score}"
 
     suspicious, header_reason = suspicious_headers(headers)
@@ -88,4 +91,5 @@ def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
     if score < 11:
         return 'bot', f"Low fingerprint score: {score}"
 
+    recent_human_logs[ip] = now
     return 'human', f"Fingerprint score OK: {score}"
