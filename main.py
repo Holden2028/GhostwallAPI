@@ -8,10 +8,11 @@ from fastapi.responses import PlainTextResponse
 LOG_FILE = "/opt/render/project/src/log.txt"
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
+    timestamp = datetime.datetime.utcnow().strftime('%b %d, %Y %I:%M:%S %p UTC')
     print(f"LOGGING: ip={ip}, api_key={api_key}, visitor_type={visitor_type}, details={details}")
     with open(LOG_FILE, "a") as f:
         f.write(
-            f"{datetime.datetime.utcnow().isoformat()}\t"
+            f"{timestamp}\t"
             f"{ip}\t"
             f"{api_key}\t"
             f"{user_agent}\t"
