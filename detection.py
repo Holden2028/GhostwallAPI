@@ -15,12 +15,11 @@ COMMON_BROWSER_HEADERS = [
 IMPORTANT_HEADERS = {'user-agent', 'accept', 'accept-language'}
 
 # --- Rate limiting state (in-memory, per-process) ---
-RATE_LIMIT = 20          # requests
-RATE_WINDOW = 60         # seconds
+RATE_LIMIT = 20
+RATE_WINDOW = 60
 ip_activity = {}
 
 def _rate_limit(ip: str) -> bool:
-    """Return True if this IP should be blocked."""
     now = time.time()
     ip_activity.setdefault(ip, [])
     ip_activity[ip] = [t for t in ip_activity[ip] if now - t < RATE_WINDOW]
@@ -33,30 +32,17 @@ def suspicious_headers(headers: dict) -> (bool, str):
         return True, f"Missing critical browser headers: {IMPORTANT_HEADERS - set(lower_headers.keys())}"
     return False, ''
 
-def detect_bot(user_agent: str, headers: dict, ip: str, js_passed: bool = False) -> (str, str):
-    """
-    Returns (visitor_type, details)
-    visitor_type: 'bot' or 'human'
-    details: Reason
-    """
-    # --- Rate limiting ---
+def detect_bot(user_agent: str, headers: dict, ip: str) -> (str, str):
     if _rate_limit(ip):
         return 'bot', 'Rate limit exceeded'
 
-    # --- Keyword in User-Agent ---
     ua = (user_agent or '').lower()
     for kw in BOT_KEYWORDS:
         if kw in ua:
             return 'bot', f"Keyword '{kw}' in User-Agent"
 
-    # --- Suspicious headers ---
     suspicious, details = suspicious_headers(headers)
     if suspicious:
         return 'bot', details
 
-    # --- JavaScript execution check ---
-    if not js_passed:
-        return 'bot', 'Failed JS execution challenge'
-
-    # --- If passed all checks ---
     return 'human', ''
