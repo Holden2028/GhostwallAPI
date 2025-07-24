@@ -8,13 +8,16 @@ BOT_KEYWORDS = [
     'fetch', 'wget', 'python', 'anthropic',
     'assistant', 'automation', 'headless', 'selenium', 'puppeteer', 'phantom'
 ]
+
 COMMON_BROWSER_HEADERS = [
-    'accept', 'accept-encoding', 'accept-language', 'cache-control', 'cookie', 'dnt',
-    'referer', 'user-agent', 'sec-ch-ua'
+    'accept', 'accept-encoding', 'accept-language', 'cache-control',
+    'cookie', 'dnt', 'referer', 'user-agent', 'sec-ch-ua',
+    'sec-fetch-mode', 'sec-fetch-site', 'upgrade-insecure-requests'
 ]
+
 IMPORTANT_HEADERS = {'user-agent', 'accept', 'accept-language'}
 
-# --- Rate limiting state (in-memory, per-process) ---
+# --- Rate limiting state (in-memory) ---
 RATE_LIMIT = 20
 RATE_WINDOW = 60
 ip_activity = {}
@@ -32,7 +35,37 @@ def suspicious_headers(headers: dict) -> (bool, str):
         return True, f"Missing critical browser headers: {IMPORTANT_HEADERS - set(lower_headers.keys())}"
     return False, ''
 
-def detect_bot(user_agent: str, headers: dict, ip: str) -> (str, str):
+def fingerprint_score(fingerprint: dict) -> int:
+    score = 0
+
+    # Header quality
+    headers = fingerprint.get("headers", {})
+    header_keys = [k.lower() for k in headers.keys()]
+    score += sum(1 for h in COMMON_BROWSER_HEADERS if h in header_keys)
+
+    # Penalize missing important headers
+    for h in IMPORTANT_HEADERS:
+        if h not in header_keys:
+            score -= 5
+
+    # Cookie presence
+    cookies = fingerprint.get("cookies", {})
+    if cookies:
+        score += 3
+    else:
+        score -= 3
+
+    # Presence of known fields
+    if fingerprint.get("referer"):
+        score += 2
+    if fingerprint.get("accept_language"):
+        score += 1
+    if fingerprint.get("accept_encoding"):
+        score += 1
+
+    return score
+
+def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
     if _rate_limit(ip):
         return 'bot', 'Rate limit exceeded'
 
@@ -41,8 +74,13 @@ def detect_bot(user_agent: str, headers: dict, ip: str) -> (str, str):
         if kw in ua:
             return 'bot', f"Keyword '{kw}' in User-Agent"
 
-    suspicious, details = suspicious_headers(headers)
+    headers = fingerprint.get("headers", {})
+    suspicious, header_reason = suspicious_headers(headers)
     if suspicious:
-        return 'bot', details
+        return 'bot', header_reason
 
-    return 'human', ''
+    score = fingerprint_score(fingerprint)
+    if score < 5:
+        return 'bot', f"Low fingerprint score: {score}"
+
+    return 'human', f"Fingerprint score OK: {score}"

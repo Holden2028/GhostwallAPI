@@ -8,7 +8,7 @@ from fastapi.responses import PlainTextResponse
 LOG_FILE = "/opt/render/project/src/log.txt"
 
 def log_request(ip, user_agent, api_key, visitor_type, details):
-    print(f"LOGGING: ip={ip}, api_key={api_key}, visitor_type={visitor_type}, details={details}")  # Debug line
+    print(f"LOGGING: ip={ip}, api_key={api_key}, visitor_type={visitor_type}, details={details}")
     with open(LOG_FILE, "a") as f:
         f.write(
             f"{datetime.datetime.utcnow().isoformat()}\t"
@@ -33,6 +33,14 @@ app.add_middleware(
 class CheckRequest(BaseModel):
     api_key: str
     user_agent: str
+    ip: str = None
+    accept: str = None
+    accept_encoding: str = None
+    accept_language: str = None
+    connection: str = None
+    referer: str = None
+    cookies: dict = {}
+    headers: dict = {}
 
 @app.get("/logfile")
 def read_log_file():
@@ -51,9 +59,21 @@ async def check(req: CheckRequest, request: Request):
         log_request(request.client.host, req.user_agent, req.api_key, "error", "Invalid API key.")
         return {"result": "error", "details": "Invalid API key."}
 
-    ip = request.client.host
-    headers = dict(request.headers)
-    visitor_type, details = detect_bot(req.user_agent, headers, ip)
+    ip = req.ip or request.client.host
+    headers = req.headers or dict(request.headers)
+
+    fingerprint = {
+        "user_agent": req.user_agent,
+        "accept": req.accept,
+        "accept_encoding": req.accept_encoding,
+        "accept_language": req.accept_language,
+        "connection": req.connection,
+        "referer": req.referer,
+        "cookies": req.cookies,
+        "headers": headers,
+    }
+
+    visitor_type, details = detect_bot(req.user_agent, fingerprint, ip)
     log_request(ip, req.user_agent, req.api_key, visitor_type, details)
     return {"result": visitor_type, "details": details}
 
