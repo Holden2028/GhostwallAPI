@@ -75,11 +75,16 @@ def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
             return 'bot', f"Keyword '{kw}' in User-Agent"
 
     headers = fingerprint.get("headers", {})
+    score = fingerprint_score(fingerprint)
+
+    # Accept good fingerprints even with minor header issues
+    if score >= 12:
+        return 'human', f"Fingerprint score override: {score}"
+
     suspicious, header_reason = suspicious_headers(headers)
     if suspicious:
         return 'bot', header_reason
 
-    score = fingerprint_score(fingerprint)
     if score < 11:
         return 'bot', f"Low fingerprint score: {score}"
 
