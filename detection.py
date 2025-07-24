@@ -65,7 +65,12 @@ def fingerprint_score(fingerprint: dict) -> int:
 
     return score
 
-def detect_bot(user_agent: str, fingerprint: dict, ip: str) -> (str, str):
+def detect_bot(user_agent: str, fingerprint: dict, ip: str, path: str = "") -> (str, str):
+    # Skip detection for trivial paths
+    ignored_paths = {"/favicon.ico", "/robots.txt", "/apple-touch-icon.png"}
+    if path in ignored_paths:
+        return 'human', f"Ignored path {path}"
+
     if _rate_limit(ip):
         return 'bot', 'Rate limit exceeded'
 

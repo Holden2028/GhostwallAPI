@@ -73,7 +73,8 @@ async def check(req: CheckRequest, request: Request):
         "headers": headers,
     }
 
-    visitor_type, details = detect_bot(req.user_agent, fingerprint, ip)
+    path = request.url.path  # Get the requested path like /favicon.ico
+    visitor_type, details = detect_bot(req.user_agent, headers, ip, path)
     log_request(ip, req.user_agent, req.api_key, visitor_type, details)
     return {"result": visitor_type, "details": details}
 
