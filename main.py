@@ -54,7 +54,17 @@ async def check(req: CheckRequest, request: Request):
 
     ip = request.client.host
     headers = dict(request.headers)
-    visitor_type, details = detect_bot(req.user_agent, headers, ip, js_passed=req.js_passed)
+
+    # Extract raw body to check for "log_only"
+    body = await request.json()
+    log_only = body.get("log_only", False)
+
+    if log_only:
+        visitor_type = "human"
+        details = "Logged only (no detection run)"
+    else:
+        visitor_type, details = detect_bot(req.user_agent, headers, ip, js_passed=req.js_passed)
+
     log_request(ip, req.user_agent, req.api_key, visitor_type, details)
     return {"result": visitor_type, "details": details}
 
