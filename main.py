@@ -33,6 +33,7 @@ app.add_middleware(
 class CheckRequest(BaseModel):
     api_key: str
     user_agent: str
+    js_passed: bool = False  # Optional field with default False
 
 @app.get("/logfile")
 def read_log_file():
@@ -50,9 +51,10 @@ async def check(req: CheckRequest, request: Request):
     if req.api_key not in VALID_API_KEYS:
         log_request(request.client.host, req.user_agent, req.api_key, "error", "Invalid API key.")
         return {"result": "error", "details": "Invalid API key."}
+
     ip = request.client.host
     headers = dict(request.headers)
-    visitor_type, details = detect_bot(req.user_agent, headers, ip)
+    visitor_type, details = detect_bot(req.user_agent, headers, ip, js_passed=req.js_passed)
     log_request(ip, req.user_agent, req.api_key, visitor_type, details)
     return {"result": visitor_type, "details": details}
 
@@ -63,14 +65,14 @@ def get_logs():
         with open(LOG_FILE, "r") as f:
             for line in f:
                 parts = line.strip().split('\t')
-                if len(parts) >= 5:  # minimum fields without details
+                if len(parts) >= 5:
                     logs.append({
                         "timestamp": parts[0],
                         "ip": parts[1],
                         "api_key": parts[2],
                         "user_agent": parts[3],
                         "visitor_type": parts[4],
-                        "details": parts[5] if len(parts) > 5 else ""  # empty if missing
+                        "details": parts[5] if len(parts) > 5 else ""
                     })
     except FileNotFoundError:
         logs = []
